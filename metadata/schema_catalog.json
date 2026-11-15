@@ -1,0 +1,191 @@
+{
+  "versao": "1.0",
+  "banco": "tcc_nl2sql",
+  "schema": "dataset",
+  "sgbd": "PostgreSQL 16",
+  "descricao": "Dataset sintético de vendas de uma empresa varejista fictícia com venda em lojas físicas e canais digitais. Usado como caso experimental para avaliação de NL2SQL.",
+  "data_referencia": "2026-09-30",
+  "periodo_pedidos": {"inicio": "2023-01-01", "fim": "2026-09-30"},
+  "convencoes": [
+    "Todas as tabelas ficam no schema 'dataset' (a role nl2sql_readonly usa search_path = dataset).",
+    "Chaves primárias se chamam 'id'; chaves estrangeiras seguem o padrão <entidade>_id.",
+    "Valores monetários em reais (BRL), tipo numeric(12,2).",
+    "Datas sem horário (tipo date).",
+    "Valores categóricos em texto MAIÚSCULO e sem acento (ex.: 'CONCLUIDO').",
+    "A data de referência ('hoje') é 2026-09-30; ver regra R09 em business_rules.json."
+  ],
+  "relacionamentos": [
+    {"de": "produtos.categoria_id", "para": "categorias.id", "cardinalidade": "N:1", "descricao": "Cada produto pertence a uma categoria; uma categoria possui vários produtos."},
+    {"de": "pedidos.cliente_id", "para": "clientes.id", "cardinalidade": "N:1", "descricao": "Cada pedido é de um cliente; um cliente pode ter zero ou mais pedidos."},
+    {"de": "pedidos.vendedor_id", "para": "vendedores.id", "cardinalidade": "N:1", "descricao": "Cada pedido tem um vendedor responsável; um vendedor pode ter zero ou mais pedidos."},
+    {"de": "itens_pedido.pedido_id", "para": "pedidos.id", "cardinalidade": "N:1", "descricao": "Cada item pertence a um pedido; todo pedido tem pelo menos um item."},
+    {"de": "itens_pedido.produto_id", "para": "produtos.id", "cardinalidade": "N:1", "descricao": "Cada item refere-se a um produto; um produto pode aparecer em vários pedidos (no máximo uma vez por pedido)."}
+  ],
+  "tabelas": [
+    {
+      "nome": "categorias",
+      "descricao": "Categorias (departamentos) de produtos.",
+      "granularidade": "Uma linha por categoria.",
+      "termos": ["categoria", "departamento", "seção", "tipo de produto", "linha de produtos"],
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "integer", "nulo": false, "pk": true, "descricao": "Identificador da categoria."},
+        {"nome": "nome", "tipo": "character varying(60)", "nulo": false, "unico": true, "descricao": "Nome da categoria, com acentuação e iniciais maiúsculas.",
+         "termos": ["nome da categoria", "departamento"],
+         "valores_possiveis": [
+           {"valor": "Eletrônicos"}, {"valor": "Informática"}, {"valor": "Eletrodomésticos"}, {"valor": "Móveis"},
+           {"valor": "Casa e Decoração"}, {"valor": "Esporte e Lazer"}, {"valor": "Moda"},
+           {"valor": "Beleza e Cuidados Pessoais"}, {"valor": "Livros e Papelaria"}, {"valor": "Brinquedos"}
+         ]},
+        {"nome": "descricao", "tipo": "character varying(255)", "nulo": false, "descricao": "Descrição textual da categoria."}
+      ]
+    },
+    {
+      "nome": "produtos",
+      "descricao": "Catálogo de produtos vendidos. Inclui produtos descontinuados (ativo = false), que possuem vendas históricas.",
+      "granularidade": "Uma linha por produto.",
+      "termos": ["produto", "item do catálogo", "mercadoria", "artigo", "SKU"],
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "integer", "nulo": false, "pk": true, "descricao": "Identificador do produto."},
+        {"nome": "categoria_id", "tipo": "integer", "nulo": false, "fk": {"tabela": "categorias", "coluna": "id"}, "descricao": "Categoria do produto."},
+        {"nome": "nome", "tipo": "character varying(120)", "nulo": false, "unico": true, "descricao": "Nome comercial no formato '<tipo de produto> <marca>' (ex.: 'Air Fryer 4L Termika'). Marcas são fictícias.",
+         "termos": ["nome do produto", "produto"]},
+        {"nome": "descricao", "tipo": "character varying(255)", "nulo": false, "descricao": "Descrição textual; informa marca e linha (econômica, intermediária ou premium)."},
+        {"nome": "preco", "tipo": "numeric(12,2)", "nulo": false, "descricao": "Preço de tabela ATUAL (na data de referência), em R$. Não é o preço das vendas passadas.",
+         "termos": ["preço atual", "preço de tabela", "preço do produto"], "regras": ["R07"]},
+        {"nome": "ativo", "tipo": "boolean", "nulo": false, "descricao": "Indica se o produto continua no catálogo. false = descontinuado.",
+         "termos": ["produto ativo", "disponível", "descontinuado", "fora de linha"],
+         "valores_possiveis": [
+           {"valor": "true", "descricao": "Produto ativo no catálogo."},
+           {"valor": "false", "descricao": "Produto descontinuado; possui apenas vendas anteriores à descontinuação."}
+         ]},
+        {"nome": "data_cadastro", "tipo": "date", "nulo": false, "descricao": "Data de inclusão no catálogo. O produto não tem vendas antes desta data.",
+         "termos": ["data de lançamento", "quando foi cadastrado"]}
+      ]
+    },
+    {
+      "nome": "clientes",
+      "descricao": "Clientes pessoa física (fictícios). Inclui clientes que nunca fizeram pedidos.",
+      "granularidade": "Uma linha por cliente.",
+      "termos": ["cliente", "consumidor", "comprador"],
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "integer", "nulo": false, "pk": true, "descricao": "Identificador do cliente."},
+        {"nome": "nome", "tipo": "character varying(120)", "nulo": false, "descricao": "Nome completo. Não é único (pode haver homônimos).", "termos": ["nome do cliente"]},
+        {"nome": "email", "tipo": "character varying(160)", "nulo": false, "unico": true, "descricao": "E-mail fictício (domínio example.com)."},
+        {"nome": "data_nascimento", "tipo": "date", "nulo": false, "descricao": "Data de nascimento; base para idade e faixa etária.",
+         "termos": ["idade", "aniversário", "faixa etária"],
+         "regras": ["R09"]},
+        {"nome": "data_cadastro", "tipo": "date", "nulo": false, "descricao": "Data em que o cliente se cadastrou. Pode ser anterior a 2023. Nenhum pedido do cliente é anterior a ela.",
+         "termos": ["data de cadastro", "cliente desde", "novos clientes", "quando se cadastrou"]},
+        {"nome": "cidade", "tipo": "character varying(80)", "nulo": false, "descricao": "Cidade do cliente, com acentuação (ex.: 'São Paulo').", "termos": ["cidade", "município"], "regras": ["R11"]},
+        {"nome": "uf", "tipo": "character(2)", "nulo": false, "descricao": "Sigla da unidade federativa do cliente. Nem todas as UFs possuem clientes.",
+         "termos": ["estado", "UF"], "regras": ["R11"],
+         "valores_possiveis": [
+           {"valor": "AC", "descricao": "Acre"}, {"valor": "AL", "descricao": "Alagoas"}, {"valor": "AM", "descricao": "Amazonas"},
+           {"valor": "AP", "descricao": "Amapá"}, {"valor": "BA", "descricao": "Bahia"}, {"valor": "CE", "descricao": "Ceará"},
+           {"valor": "DF", "descricao": "Distrito Federal"}, {"valor": "ES", "descricao": "Espírito Santo"}, {"valor": "GO", "descricao": "Goiás"},
+           {"valor": "MA", "descricao": "Maranhão"}, {"valor": "MG", "descricao": "Minas Gerais"}, {"valor": "MS", "descricao": "Mato Grosso do Sul"},
+           {"valor": "MT", "descricao": "Mato Grosso"}, {"valor": "PA", "descricao": "Pará"}, {"valor": "PB", "descricao": "Paraíba"},
+           {"valor": "PE", "descricao": "Pernambuco"}, {"valor": "PI", "descricao": "Piauí"}, {"valor": "PR", "descricao": "Paraná"},
+           {"valor": "RJ", "descricao": "Rio de Janeiro"}, {"valor": "RN", "descricao": "Rio Grande do Norte"}, {"valor": "RO", "descricao": "Rondônia"},
+           {"valor": "RR", "descricao": "Roraima"}, {"valor": "RS", "descricao": "Rio Grande do Sul"}, {"valor": "SC", "descricao": "Santa Catarina"},
+           {"valor": "SE", "descricao": "Sergipe"}, {"valor": "SP", "descricao": "São Paulo"}, {"valor": "TO", "descricao": "Tocantins"}
+         ]},
+        {"nome": "segmento", "tipo": "character varying(10)", "nulo": false, "descricao": "Plano de relacionamento do cliente (programa de fidelidade).",
+         "termos": ["segmento", "plano", "tipo de cliente", "cliente premium", "cliente VIP"],
+         "valores_possiveis": [
+           {"valor": "PADRAO", "descricao": "Cliente padrão."},
+           {"valor": "PREMIUM", "descricao": "Cliente do programa premium de fidelidade."}
+         ]},
+        {"nome": "status", "tipo": "character varying(10)", "nulo": false, "descricao": "Situação cadastral atual. Independente de o cliente ter comprado.",
+         "termos": ["cliente ativo", "cliente inativo", "situação do cliente"], "regras": ["R10"],
+         "valores_possiveis": [
+           {"valor": "ATIVO", "descricao": "Cadastro ativo."},
+           {"valor": "INATIVO", "descricao": "Cadastro inativo (desativado)."}
+         ]}
+      ]
+    },
+    {
+      "nome": "vendedores",
+      "descricao": "Vendedores responsáveis pelos pedidos, inclusive vendedores já desligados.",
+      "granularidade": "Uma linha por vendedor.",
+      "termos": ["vendedor", "consultor de vendas", "representante", "atendente", "equipe de vendas"],
+      "chave_primaria": ["id"],
+      "colunas": [
+        {"nome": "id", "tipo": "integer", "nulo": false, "pk": true, "descricao": "Identificador do vendedor."},
+        {"nome": "nome", "tipo": "character varying(120)", "nulo": false, "descricao": "Nome completo.", "termos": ["nome do vendedor"]},
+        {"nome": "email", "tipo": "character varying(160)", "nulo": false, "unico": true, "descricao": "E-mail corporativo fictício (domínio vendas.example.com)."},
+        {"nome": "data_admissao", "tipo": "date", "nulo": false, "descricao": "Data de contratação. Nenhum pedido do vendedor é anterior a ela.",
+         "termos": ["data de admissão", "contratação", "tempo de casa"]},
+        {"nome": "data_desligamento", "tipo": "date", "nulo": true, "descricao": "Data de desligamento; NULL para vendedores ativos. Nenhum pedido do vendedor é posterior a ela.",
+         "termos": ["desligamento", "demissão", "saída"], "regras": ["R10"]},
+        {"nome": "regiao", "tipo": "character varying(12)", "nulo": false, "descricao": "Região do Brasil em que o vendedor atua.",
+         "termos": ["região", "região do vendedor", "área de atuação"], "regras": ["R11"],
+         "valores_possiveis": [
+           {"valor": "NORTE"}, {"valor": "NORDESTE"}, {"valor": "CENTRO-OESTE"}, {"valor": "SUDESTE"}, {"valor": "SUL"}
+         ]},
+        {"nome": "status", "tipo": "character varying(10)", "nulo": false, "descricao": "ATIVO se não possui data de desligamento; INATIVO se foi desligado.",
+         "termos": ["vendedor ativo", "vendedor desligado"], "regras": ["R10"],
+         "valores_possiveis": [
+           {"valor": "ATIVO", "descricao": "Vendedor em atividade."},
+           {"valor": "INATIVO", "descricao": "Vendedor desligado (data_desligamento preenchida)."}
+         ]}
+      ]
+    },
+    {
+      "nome": "pedidos",
+      "descricao": "Cabeçalho dos pedidos de venda. Pedidos CANCELADOS e PENDENTES continuam armazenados.",
+      "granularidade": "Uma linha por pedido.",
+      "termos": ["pedido", "venda", "compra", "transação", "ordem de compra"],
+      "chave_primaria": ["id"],
+      "regras": ["R01", "R02", "R03", "R05", "R09", "R12"],
+      "colunas": [
+        {"nome": "id", "tipo": "integer", "nulo": false, "pk": true, "descricao": "Identificador do pedido (numeração crescente em ordem cronológica).", "termos": ["número do pedido"]},
+        {"nome": "cliente_id", "tipo": "integer", "nulo": false, "fk": {"tabela": "clientes", "coluna": "id"}, "descricao": "Cliente que realizou o pedido."},
+        {"nome": "vendedor_id", "tipo": "integer", "nulo": false, "fk": {"tabela": "vendedores", "coluna": "id"}, "descricao": "Vendedor responsável pelo pedido (todo pedido possui vendedor, inclusive nos canais digitais)."},
+        {"nome": "data_pedido", "tipo": "date", "nulo": false, "descricao": "Data em que o pedido foi realizado, entre 2023-01-01 e 2026-09-30.",
+         "termos": ["data da compra", "data da venda", "quando comprou", "período da venda", "mês", "ano"], "regras": ["R09"]},
+        {"nome": "status", "tipo": "character varying(10)", "nulo": false, "descricao": "Situação do pedido. Somente CONCLUIDO representa venda efetivada.",
+         "termos": ["situação do pedido", "concluído", "cancelado", "pendente", "em aberto"], "regras": ["R01", "R02", "R12"],
+         "valores_possiveis": [
+           {"valor": "CONCLUIDO", "descricao": "Venda efetivada; entra em faturamento e demais métricas de venda."},
+           {"valor": "CANCELADO", "descricao": "Pedido cancelado; não entra em faturamento."},
+           {"valor": "PENDENTE", "descricao": "Pedido ainda não concluído (recente); não entra em faturamento."}
+         ]},
+        {"nome": "canal_venda", "tipo": "character varying(10)", "nulo": false, "descricao": "Canal pelo qual o pedido foi realizado.",
+         "termos": ["canal", "canal de venda", "online", "loja física", "aplicativo", "televendas"],
+         "valores_possiveis": [
+           {"valor": "SITE", "descricao": "Loja virtual (site)."},
+           {"valor": "LOJA", "descricao": "Loja física."},
+           {"valor": "APP", "descricao": "Aplicativo móvel."},
+           {"valor": "TELEFONE", "descricao": "Televendas."}
+         ]},
+        {"nome": "valor_total", "tipo": "numeric(12,2)", "nulo": false, "descricao": "Valor total do pedido em R$, igual à soma de itens_pedido.valor_total_item do pedido (já líquido de descontos).",
+         "termos": ["valor do pedido", "total do pedido", "faturamento", "receita", "valor vendido", "ticket"], "regras": ["R01", "R05", "R06", "R12"]}
+      ]
+    },
+    {
+      "nome": "itens_pedido",
+      "descricao": "Itens (linhas) dos pedidos: qual produto, quantas unidades, a que preço e com qual desconto.",
+      "granularidade": "Uma linha por produto em cada pedido (um produto aparece no máximo uma vez por pedido).",
+      "termos": ["item do pedido", "itens vendidos", "produtos do pedido", "linha do pedido"],
+      "chave_primaria": ["id"],
+      "regras": ["R04", "R06", "R07", "R08"],
+      "colunas": [
+        {"nome": "id", "tipo": "integer", "nulo": false, "pk": true, "descricao": "Identificador do item."},
+        {"nome": "pedido_id", "tipo": "integer", "nulo": false, "fk": {"tabela": "pedidos", "coluna": "id"}, "descricao": "Pedido ao qual o item pertence. O status da venda está em pedidos.status."},
+        {"nome": "produto_id", "tipo": "integer", "nulo": false, "fk": {"tabela": "produtos", "coluna": "id"}, "descricao": "Produto vendido."},
+        {"nome": "quantidade", "tipo": "integer", "nulo": false, "descricao": "Número de unidades do produto (> 0).",
+         "termos": ["quantidade", "unidades", "quantidade vendida"], "regras": ["R04"]},
+        {"nome": "preco_unitario", "tipo": "numeric(12,2)", "nulo": false, "descricao": "Preço unitário praticado na data do pedido, em R$ (histórico; difere de produtos.preco).",
+         "termos": ["preço de venda", "preço pago", "preço praticado"], "regras": ["R07"]},
+        {"nome": "desconto", "tipo": "numeric(12,2)", "nulo": false, "descricao": "Desconto total do item em R$ (valor absoluto, não percentual). 0 quando não houve desconto.",
+         "termos": ["desconto", "abatimento"], "regras": ["R08"]},
+        {"nome": "valor_total_item", "tipo": "numeric(12,2)", "nulo": false, "descricao": "Valor líquido do item: quantidade * preco_unitario - desconto.",
+         "termos": ["valor do item", "valor líquido", "receita do produto"], "regras": ["R06", "R08"]}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "versao": "1.0",
+  "descricao": "Regras semânticas do domínio de vendas do dataset experimental. Definem como conceitos de linguagem natural devem ser interpretados sobre o schema 'dataset'. Os trechos SQL são fragmentos de definição (medidas e condições), não consultas completas.",
+  "data_referencia": "2026-09-30",
+  "regras": [
+    {
+      "id": "R01",
+      "nome": "Faturamento",
+      "termos": ["faturamento", "receita", "valor vendido", "total vendido", "vendas em reais", "quanto vendeu"],
+      "definicao": "Soma do valor total dos pedidos com status CONCLUIDO. Pedidos CANCELADOS e PENDENTES nunca entram no faturamento.",
+      "definicao_sql": "SUM(pedidos.valor_total) considerando apenas pedidos.status = 'CONCLUIDO'",
+      "tabelas": ["pedidos"],
+      "colunas": ["pedidos.valor_total", "pedidos.status"],
+      "observacoes": "Quando o faturamento precisa ser quebrado por produto ou categoria, aplicar a regra R06."
+    },
+    {
+      "id": "R02",
+      "nome": "Venda / compra (pedido efetivado)",
+      "termos": ["venda", "vendas", "compra", "compras", "comprou", "vendeu", "pedido realizado com sucesso"],
+      "definicao": "Uma venda (do ponto de vista do vendedor) ou compra (do ponto de vista do cliente) é um pedido com status CONCLUIDO. O termo 'pedido' sem qualificação refere-se a qualquer pedido registrado, de qualquer status.",
+      "definicao_sql": "pedidos.status = 'CONCLUIDO'",
+      "tabelas": ["pedidos"],
+      "colunas": ["pedidos.status"],
+      "observacoes": "Ex.: 'número de vendas' conta pedidos CONCLUIDOS; 'número de pedidos' conta todos os pedidos, salvo indicação de status."
+    },
+    {
+      "id": "R03",
+      "nome": "Cliente que comprou",
+      "termos": ["cliente que comprou", "clientes compradores", "clientes que fizeram compras", "clientes com compras"],
+      "definicao": "Cliente que possui pelo menos um pedido com status CONCLUIDO (no período considerado, quando houver período). Clientes sem pedidos ou apenas com pedidos CANCELADOS/PENDENTES não compraram.",
+      "definicao_sql": "EXISTS pedido de pedidos.cliente_id = clientes.id com pedidos.status = 'CONCLUIDO'",
+      "tabelas": ["clientes", "pedidos"],
+      "colunas": ["clientes.id", "pedidos.cliente_id", "pedidos.status"],
+      "observacoes": "Contagens de clientes devem ser de clientes distintos."
+    },
+    {
+      "id": "R04",
+      "nome": "Quantidade vendida",
+      "termos": ["quantidade vendida", "unidades vendidas", "itens vendidos", "volume de vendas em unidades"],
+      "definicao": "Soma de itens_pedido.quantidade dos itens pertencentes a pedidos CONCLUIDOS.",
+      "definicao_sql": "SUM(itens_pedido.quantidade) com itens_pedido.pedido_id = pedidos.id e pedidos.status = 'CONCLUIDO'",
+      "tabelas": ["itens_pedido", "pedidos"],
+      "colunas": ["itens_pedido.quantidade", "itens_pedido.pedido_id", "pedidos.id", "pedidos.status"],
+      "observacoes": "Quantidade vendida mede unidades; o número de linhas de itens_pedido mede em quantos pedidos o produto apareceu."
+    },
+    {
+      "id": "R05",
+      "nome": "Ticket médio",
+      "termos": ["ticket médio", "valor médio por pedido", "valor médio das compras", "gasto médio por compra"],
+      "definicao": "Média de pedidos.valor_total considerando apenas pedidos CONCLUIDOS (faturamento / número de vendas).",
+      "definicao_sql": "AVG(pedidos.valor_total) considerando apenas pedidos.status = 'CONCLUIDO'",
+      "tabelas": ["pedidos"],
+      "colunas": ["pedidos.valor_total", "pedidos.status"],
+      "observacoes": "É uma média por pedido, não por item nem por cliente."
+    },
+    {
+      "id": "R06",
+      "nome": "Faturamento por produto ou categoria",
+      "termos": ["faturamento do produto", "receita por categoria", "quanto cada produto vendeu em reais", "participação da categoria nas vendas"],
+      "definicao": "Para valores por produto ou categoria somar itens_pedido.valor_total_item (itens de pedidos CONCLUIDOS), e não pedidos.valor_total, pois um pedido pode conter produtos de várias categorias. Somar pedidos.valor_total após juntar com itens_pedido conta o mesmo pedido várias vezes.",
+      "definicao_sql": "SUM(itens_pedido.valor_total_item) com pedidos.status = 'CONCLUIDO'",
+      "tabelas": ["itens_pedido", "pedidos", "produtos", "categorias"],
+      "colunas": ["itens_pedido.valor_total_item", "itens_pedido.produto_id", "produtos.categoria_id", "pedidos.status"],
+      "observacoes": "A soma de valor_total_item de todos os itens de pedidos CONCLUIDOS é igual ao faturamento total (R01)."
+    },
+    {
+      "id": "R07",
+      "nome": "Preço praticado x preço atual",
+      "termos": ["preço de venda", "preço pago", "preço praticado", "preço atual", "preço de tabela"],
+      "definicao": "itens_pedido.preco_unitario é o preço efetivamente praticado na data do pedido. produtos.preco é o preço de tabela atual (na data de referência). Os dois diferem porque os preços variaram ao longo do tempo.",
+      "definicao_sql": "histórico: itens_pedido.preco_unitario; atual: produtos.preco",
+      "tabelas": ["itens_pedido", "produtos"],
+      "colunas": ["itens_pedido.preco_unitario", "produtos.preco"],
+      "observacoes": "Valores de vendas passadas nunca devem ser recalculados com produtos.preco."
+    },
+    {
+      "id": "R08",
+      "nome": "Valor bruto, desconto e valor líquido do item",
+      "termos": ["desconto", "valor bruto", "valor líquido", "valor sem desconto", "total de descontos concedidos"],
+      "definicao": "Valor bruto do item = quantidade * preco_unitario. desconto é um valor em reais (não percentual) aplicado ao item inteiro. Valor líquido = valor_total_item = quantidade * preco_unitario - desconto.",
+      "definicao_sql": "bruto: itens_pedido.quantidade * itens_pedido.preco_unitario; líquido: itens_pedido.valor_total_item",
+      "tabelas": ["itens_pedido"],
+      "colunas": ["itens_pedido.quantidade", "itens_pedido.preco_unitario", "itens_pedido.desconto", "itens_pedido.valor_total_item"],
+      "observacoes": "Percentual de desconto = desconto / (quantidade * preco_unitario). Pedidos não possuem desconto próprio; o desconto do pedido é a soma dos descontos dos itens."
+    },
+    {
+      "id": "R09",
+      "nome": "Referência temporal",
+      "termos": ["hoje", "este ano", "ano atual", "mês passado", "últimos meses", "recentemente", "data da venda", "quando comprou"],
+      "definicao": "A data de referência do dataset é 2026-09-30 e representa 'hoje'. Expressões relativas (este ano, mês passado, últimos N dias) são calculadas a partir de 2026-09-30, nunca a partir da data do sistema. Períodos de vendas usam pedidos.data_pedido. Anos e meses são de calendário.",
+      "definicao_sql": "usar DATE '2026-09-30' no lugar de CURRENT_DATE; filtros de período sobre pedidos.data_pedido",
+      "tabelas": ["pedidos"],
+      "colunas": ["pedidos.data_pedido"],
+      "observacoes": "Os pedidos cobrem 2023-01-01 a 2026-09-30; o ano de 2026 está incompleto (janeiro a setembro). 'Mês passado' em relação à referência é agosto de 2026."
+    },
+    {
+      "id": "R10",
+      "nome": "Status cadastral x atividade de compra",
+      "termos": ["cliente ativo", "cliente inativo", "vendedor ativo", "vendedor desligado", "ex-vendedor"],
+      "definicao": "clientes.status (ATIVO/INATIVO) é a situação cadastral e é independente de o cliente ter comprado. 'Clientes ativos' significa clientes.status = 'ATIVO'. vendedores.status = 'INATIVO' indica vendedor desligado, com data_desligamento preenchida; ele possui vendas apenas até essa data.",
+      "definicao_sql": "clientes.status = 'ATIVO'; vendedores.status = 'ATIVO'",
+      "tabelas": ["clientes", "vendedores"],
+      "colunas": ["clientes.status", "vendedores.status", "vendedores.data_desligamento"],
+      "observacoes": "Para clientes que compraram ou deixaram de comprar usar pedidos (regra R03), não clientes.status."
+    },
+    {
+      "id": "R11",
+      "nome": "Localização e região",
+      "termos": ["região", "estado", "UF", "cidade", "Nordeste", "Sudeste", "Sul", "Norte", "Centro-Oeste"],
+      "definicao": "A localização do cliente está em clientes.cidade e clientes.uf (sigla). vendedores.regiao é a região de atuação do vendedor. Não existe coluna de região para clientes; a região do cliente deriva da UF: NORTE = AC, AM, AP, PA, RO, RR, TO; NORDESTE = AL, BA, CE, MA, PB, PE, PI, RN, SE; CENTRO-OESTE = DF, GO, MS, MT; SUDESTE = ES, MG, RJ, SP; SUL = PR, RS, SC.",
+      "definicao_sql": "clientes.uf IN (...siglas da região...); vendedores.regiao = 'NORDESTE'",
+      "tabelas": ["clientes", "vendedores"],
+      "colunas": ["clientes.uf", "clientes.cidade", "vendedores.regiao"],
+      "observacoes": "Um vendedor pode atender clientes de outras regiões. 'Vendas do vendedor da região X' usa vendedores.regiao; 'vendas para clientes do estado X' usa clientes.uf."
+    },
+    {
+      "id": "R12",
+      "nome": "Pedidos cancelados e pendentes",
+      "termos": ["cancelamento", "pedidos cancelados", "taxa de cancelamento", "pedidos pendentes", "em aberto", "valor cancelado"],
+      "definicao": "Pedidos CANCELADOS e PENDENTES permanecem armazenados com seus itens e valor_total (valor que a transação teria). São excluídos de faturamento, vendas, quantidade vendida e ticket médio, mas podem ser analisados diretamente (ex.: valor cancelado = soma de valor_total dos pedidos CANCELADOS). Taxa de cancelamento = pedidos CANCELADOS / total de pedidos.",
+      "definicao_sql": "pedidos.status = 'CANCELADO'; pedidos.status = 'PENDENTE'",
+      "tabelas": ["pedidos"],
+      "colunas": ["pedidos.status", "pedidos.valor_total"],
+      "observacoes": "Pedidos PENDENTES ocorrem apenas nas semanas finais antes da data de referência (ainda não concluídos)."
+    }
+  ]
+}

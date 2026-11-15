@@ -1,0 +1,387 @@
+{
+  "versao": "1.0-rascunho",
+  "banco": "tcc_nl2sql",
+  "schema": "dataset",
+  "data_referencia": "2026-09-30",
+  "total": 30,
+  "perguntas": [
+    {
+      "id": "Q01",
+      "nivel": "simples",
+      "pergunta": "Quantos clientes existem cadastrados, independentemente do status?",
+      "sql_referencia": "referencias/Q01.sql",
+      "topicos": [
+        "COUNT"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q02",
+      "nivel": "simples",
+      "pergunta": "Quantos produtos estão ativos no catálogo?",
+      "sql_referencia": "referencias/Q02.sql",
+      "topicos": [
+        "WHERE",
+        "COUNT"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q03",
+      "nivel": "simples",
+      "pergunta": "Quantos vendedores estão atualmente com status ATIVO?",
+      "sql_referencia": "referencias/Q03.sql",
+      "topicos": [
+        "WHERE",
+        "COUNT"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q04",
+      "nivel": "simples",
+      "pergunta": "Quantos pedidos com status CANCELADO foram registrados durante o ano de 2025?",
+      "sql_referencia": "referencias/Q04.sql",
+      "topicos": [
+        "WHERE",
+        "datas"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q05",
+      "nivel": "simples",
+      "pergunta": "Qual foi o faturamento total dos pedidos CONCLUIDOS em 2025, em reais?",
+      "sql_referencia": "referencias/Q05.sql",
+      "topicos": [
+        "SUM",
+        "status",
+        "datas"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q06",
+      "nivel": "simples",
+      "pergunta": "Qual foi o ticket médio dos pedidos CONCLUIDOS em 2025, em reais por pedido?",
+      "sql_referencia": "referencias/Q06.sql",
+      "topicos": [
+        "AVG",
+        "ROUND"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q07",
+      "nivel": "simples",
+      "pergunta": "Quantos pedidos CONCLUIDOS foram realizados pelo canal SITE de 1º de janeiro a 30 de setembro de 2026, inclusive?",
+      "sql_referencia": "referencias/Q07.sql",
+      "topicos": [
+        "WHERE",
+        "datas"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q08",
+      "nivel": "simples",
+      "pergunta": "Quantos clientes do segmento PREMIUM, com status ATIVO, estão cadastrados na UF DF?",
+      "sql_referencia": "referencias/Q08.sql",
+      "topicos": [
+        "WHERE"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q09",
+      "nivel": "simples",
+      "pergunta": "Qual é o maior preço de tabela atual entre os produtos ativos?",
+      "sql_referencia": "referencias/Q09.sql",
+      "topicos": [
+        "MAX",
+        "WHERE"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q10",
+      "nivel": "simples",
+      "pergunta": "Quantas cidades distintas possuem clientes cadastrados na UF SP?",
+      "sql_referencia": "referencias/Q10.sql",
+      "topicos": [
+        "DISTINCT",
+        "COUNT"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q11",
+      "nivel": "intermediaria",
+      "pergunta": "Qual foi o faturamento de pedidos CONCLUIDOS em 2025 por canal de venda? Mostre os canais com vendas, em ordem alfabética.",
+      "sql_referencia": "referencias/Q11.sql",
+      "topicos": [
+        "GROUP BY",
+        "SUM"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q12",
+      "nivel": "intermediaria",
+      "pergunta": "Quais foram os dez clientes que mais geraram faturamento em pedidos CONCLUIDOS em 2025? Exiba ID, nome e faturamento, ordenando por faturamento decrescente e ID crescente em empates.",
+      "sql_referencia": "referencias/Q12.sql",
+      "topicos": [
+        "JOIN",
+        "GROUP BY",
+        "TOP N"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q13",
+      "nivel": "intermediaria",
+      "pergunta": "Qual foi o faturamento por categoria de produto em pedidos CONCLUIDOS em 2025? Considere o valor líquido dos itens e exiba o ID da categoria, o nome da categoria e o faturamento, mostrando somente categorias com vendas, ordenadas por nome.",
+      "sql_referencia": "referencias/Q13.sql",
+      "topicos": [
+        "JOIN",
+        "SUM",
+        "itens"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q14",
+      "nivel": "intermediaria",
+      "pergunta": "Quais foram os dez produtos com maior quantidade de unidades vendidas em pedidos CONCLUIDOS em 2025? Exiba ID, nome e unidades, com desempate por ID crescente.",
+      "sql_referencia": "referencias/Q14.sql",
+      "topicos": [
+        "JOIN",
+        "SUM",
+        "TOP N"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q15",
+      "nivel": "intermediaria",
+      "pergunta": "Qual foi o faturamento de cada vendedor que realizou pelo menos um pedido CONCLUIDO em 2025, incluindo vendedores hoje inativos? Exiba o ID, o nome, o status atual e o faturamento de cada vendedor. Ordene por faturamento decrescente e ID crescente.",
+      "sql_referencia": "referencias/Q15.sql",
+      "topicos": [
+        "JOIN",
+        "GROUP BY"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q16",
+      "nivel": "intermediaria",
+      "pergunta": "Qual foi o ticket médio dos pedidos CONCLUIDOS em 2025 por UF do cliente? Exiba UF, número de pedidos e ticket médio em reais, incluindo somente UFs com vendas e ordenando pela UF.",
+      "sql_referencia": "referencias/Q16.sql",
+      "topicos": [
+        "JOIN",
+        "AVG",
+        "GROUP BY"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q17",
+      "nivel": "intermediaria",
+      "pergunta": "Quantos clientes cadastrados nunca realizaram um pedido CONCLUIDO até 30 de setembro de 2026, inclusive?",
+      "sql_referencia": "referencias/Q17.sql",
+      "topicos": [
+        "NOT EXISTS",
+        "subconsulta"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q18",
+      "nivel": "intermediaria",
+      "pergunta": "Qual foi o faturamento mensal de pedidos CONCLUIDOS em 2025? Exiba apenas meses com vendas, em ordem cronológica.",
+      "sql_referencia": "referencias/Q18.sql",
+      "topicos": [
+        "DATE_TRUNC",
+        "GROUP BY"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q19",
+      "nivel": "intermediaria",
+      "pergunta": "Quantos pedidos CONCLUIDOS foram realizados em 2025 por clientes de cada segmento de fidelidade? Mostre apenas segmentos com pedidos, ordenados pelo nome do segmento.",
+      "sql_referencia": "referencias/Q19.sql",
+      "topicos": [
+        "JOIN",
+        "COUNT",
+        "GROUP BY"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q20",
+      "nivel": "intermediaria",
+      "pergunta": "Qual foi a taxa percentual de cancelamento por canal de venda em 2025? Divida os pedidos CANCELADOS por todos os pedidos do canal no período, inclusive PENDENTES e CONCLUIDOS; mostre canais com pedidos e arredonde para duas casas.",
+      "sql_referencia": "referencias/Q20.sql",
+      "topicos": [
+        "FILTER",
+        "GROUP BY",
+        "taxa"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q21",
+      "nivel": "complexa",
+      "pergunta": "Quantos clientes tiveram sua primeira compra CONCLUIDA da história em 2025, por canal dessa primeira compra? Se houver duas compras na mesma data, considere primeiro o pedido de menor ID. Mostre os canais com clientes adquiridos, em ordem alfabética.",
+      "sql_referencia": "referencias/Q21.sql",
+      "topicos": [
+        "CTE",
+        "ROW_NUMBER",
+        "primeira compra"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q22",
+      "nivel": "complexa",
+      "pergunta": "Qual foi a receita média por cliente nos 12 meses após a primeira compra CONCLUIDA, agrupada pelo canal dessa primeira compra? Inclua a primeira compra, exclua CANCELADOS e PENDENTES, considere apenas clientes cuja primeira compra ocorreu até 30/09/2025, e use janela de 12 meses com início inclusivo e fim exclusivo. Em empate de data, a primeira compra é a de menor ID. Mostre canal, quantidade de clientes e média em reais, ordenados pelo canal.",
+      "sql_referencia": "referencias/Q22.sql",
+      "topicos": [
+        "CTE",
+        "ROW_NUMBER",
+        "janela temporal",
+        "AVG"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q23",
+      "nivel": "complexa",
+      "pergunta": "Para cada mês de 2025, inclusive meses sem vendas, qual foi o faturamento de pedidos CONCLUIDOS e a variação absoluta em reais em relação ao mês anterior? Para janeiro, a variação deve ser NULL. Ordene cronologicamente.",
+      "sql_referencia": "referencias/Q23.sql",
+      "topicos": [
+        "GENERATE_SERIES",
+        "LEFT JOIN",
+        "LAG"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q24",
+      "nivel": "complexa",
+      "pergunta": "Quais foram os três produtos de maior faturamento líquido em cada categoria em 2025, considerando somente pedidos CONCLUIDOS? Exiba o ID e o nome da categoria, o ID e o nome do produto, a receita e a posição; em empate de receita, use o menor ID do produto como desempate e retorne no máximo três por categoria.",
+      "sql_referencia": "referencias/Q24.sql",
+      "topicos": [
+        "CTE",
+        "ROW_NUMBER",
+        "TOP N por grupo"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q25",
+      "nivel": "complexa",
+      "pergunta": "Quantos clientes fizeram pelo menos uma compra CONCLUIDA em 2024, mas nenhuma compra CONCLUIDA em 2025? Compras em outros anos não impedem a inclusão.",
+      "sql_referencia": "referencias/Q25.sql",
+      "topicos": [
+        "EXISTS",
+        "NOT EXISTS",
+        "recompra"
+      ],
+      "ordenacao_importa": false,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q26",
+      "nivel": "complexa",
+      "pergunta": "Para cada coorte mensal de clientes cuja primeira compra CONCLUIDA ocorreu em 2024, qual foi a retenção no mês M3? Defina M3 como o terceiro mês-calendário após o mês da primeira compra e retenção como ao menos um pedido CONCLUIDO nesse mês. Mostre coorte, clientes, retidos e percentual com duas casas, em ordem cronológica.",
+      "sql_referencia": "referencias/Q26.sql",
+      "topicos": [
+        "CTE",
+        "EXISTS",
+        "coorte",
+        "retenção"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q27",
+      "nivel": "complexa",
+      "pergunta": "Qual foi a participação percentual de cada canal no faturamento de pedidos CONCLUIDOS de 2025 e a participação acumulada? Ordene os canais por faturamento decrescente e, em empate, por nome crescente. Arredonde os percentuais para duas casas.",
+      "sql_referencia": "referencias/Q27.sql",
+      "topicos": [
+        "CTE",
+        "window SUM",
+        "participação acumulada"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q28",
+      "nivel": "complexa",
+      "pergunta": "Qual foi o vendedor com maior faturamento de pedidos CONCLUIDOS em 2025 em cada região de atuação? Considere vendedores ativos e inativos, somente os que tiveram vendas; em empate de faturamento, escolha o menor ID do vendedor. Exiba região, ID, nome e faturamento, ordenados por região.",
+      "sql_referencia": "referencias/Q28.sql",
+      "topicos": [
+        "CTE",
+        "ROW_NUMBER",
+        "ranking por região"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q29",
+      "nivel": "complexa",
+      "pergunta": "Quais foram os dez pares de produtos distintos que mais apareceram juntos no mesmo pedido CONCLUIDO em 2025? Conte pedidos que contêm ambos os produtos, não unidades; exiba IDs, nomes e quantidade de pedidos, com desempate por IDs crescentes.",
+      "sql_referencia": "referencias/Q29.sql",
+      "topicos": [
+        "self JOIN",
+        "pares",
+        "TOP N"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    },
+    {
+      "id": "Q30",
+      "nivel": "complexa",
+      "pergunta": "Entre produtos atualmente ativos que tiveram unidades vendidas em pedidos CONCLUIDOS em 2025, quais são os dez com maior diferença absoluta, em reais, entre o preço de tabela atual e o preço unitário médio efetivamente recebido em 2025 (receita líquida dividida por unidades)? Exiba ID, nome, preços, diferença absoluta; desempate por ID crescente e arredonde o preço médio e a diferença para duas casas.",
+      "sql_referencia": "referencias/Q30.sql",
+      "topicos": [
+        "CTE",
+        "preço histórico",
+        "média ponderada",
+        "TOP N"
+      ],
+      "ordenacao_importa": true,
+      "status_validacao": "executado_revisao_semantica_pendente"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+# Ambiente experimental: PostgreSQL (dataset + registro dos experimentos) e n8n.
+# Na PRIMEIRA inicialização (volume vazio) o container executa docker/initdb/:
+#   01_init.sql        schema "dataset" e role nl2sql_readonly (somente leitura)
+#   02_experiments.sql banco tcc_experiments e role experiment_writer (registro)
+# Os dados do dataset são inseridos depois, pelo seed em Python (ver README).
+# Volume já existente: aplique 02_experiments.sql manualmente (ver README).
+services:
+  db:
+    image: postgres:16
+    container_name: tcc-nl2sql-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB no .env}
+      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      NL2SQL_READONLY_PASSWORD: ${NL2SQL_READONLY_PASSWORD:?defina NL2SQL_READONLY_PASSWORD no .env}
+      EXPERIMENT_WRITER_PASSWORD: ${EXPERIMENT_WRITER_PASSWORD:?defina EXPERIMENT_WRITER_PASSWORD no .env}
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database:/database:ro
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.43.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - TZ=America/Sao_Paulo
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_SECURE_COOKIE=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  pgdata:
+  n8n_data:

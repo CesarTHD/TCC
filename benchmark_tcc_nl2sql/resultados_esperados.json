@@ -1,0 +1,304 @@
+{
+  "observacao": "PENDENTE: executar os SQLs na base congelada e preencher os resultados reais; não foram inventados resultados.",
+  "data_referencia": "2026-09-30",
+  "resultados": {
+    "Q01": 2000,
+    "Q02": 204,
+    "Q03": 21,
+    "Q04": 226,
+    "Q05": 3783518.26,
+    "Q06": 1039.71,
+    "Q07": 1278,
+    "Q08": 13,
+    "Q09": 6790.90,
+    "Q10": 6,
+    "Q11": {
+      "columns": ["canal_venda", "faturamento"],
+      "rows": [
+        ["APP", 996574.67],
+        ["LOJA", 1117014.11],
+        ["SITE", 1474847.43],
+        ["TELEFONE", 195082.05]
+      ]
+    },
+    "Q12": {
+      "columns": ["cliente_id", "cliente", "faturamento"],
+      "rows": [
+        [1897,	"Bruno Gonçalves Santana",	22742.06],
+        [548,	"Maria Mendes Santana",	22433.65],
+        [1212,	"José Rodrigues Ribeiro",	21295.37],
+        [26,	"Isabela Rocha Cavalcanti",	20595.74],
+        [1365,	"Helena Rodrigues Gomes",	20386.24],
+        [116,	"Eduarda Vieira Marques",	20148.11],
+        [1069,	"Miguel Vieira Silva",	19719.28],
+        [403,	"Karina Gonçalves Farias",	19635.30],
+        [1577,	"Wellington Gonçalves Barbosa",	19131.33],
+        [1158,	"Isabela Rocha Almeida",	18574.23]
+      ]
+    },
+    "Q13": {
+      "columns": ["categoria_id", "categoria", "faturamento"],
+      "rows": [
+        [8,	"Beleza e Cuidados Pessoais",	272653.35],
+        [10,	"Brinquedos",	195196.43],
+        [5,	"Casa e Decoração",	348231.25],
+        [3,	"Eletrodomésticos",	558163.84],
+        [1,	"Eletrônicos",	752808.99],
+        [6,	"Esporte e Lazer",	308850.40],
+        [2,	"Informática",	619234.71],
+        [9,	"Livros e Papelaria",	221166.28],
+        [7,	"Moda",	320538.80],
+        [4,	"Móveis",	186674.21]
+      ]
+    },
+    "Q14": {
+      "columns": ["produto_id", "produto", "unidades_vendidas"],
+      "rows": [
+        [137,	"Garrafa Térmica Trilhar",	722],
+        [142,	"Calça Jeans Urbanna",	623],
+        [182,	"Livro de Ficção Letra Viva",	499],
+        [175,	"Protetor Solar FPS 50 Pelebela",	486],
+        [198,	"Planner Semanal Grafitto",	467],
+        [200,	"Calculadora Científica Letra Viva",	446],
+        [22,	"Câmera de Segurança Wi-Fi Voltrix",	409],
+        [196,	"Planner Semanal Papiro Azul",	326],
+        [139,	"Camiseta Básica Urbanna",	324],
+        [169,	"Barbeador Elétrico Pelebela",	318]
+      ]
+    },
+    "Q15": {
+      "columns": ["vendedor_id", "vendedor", "status_atual", "faturamento"],
+      "rows": [
+        [2,	"Ricardo Cavalcanti Siqueira",	"ATIVO",	327778.40],
+        [6,	"André Oliveira Almeida",	"ATIVO",	288987.25],
+        [24,	"Vanessa Fonseca Silva",	"ATIVO",	265098.67],
+        [17,	"Heitor Andrade Moura",	"ATIVO",	235626.59],
+        [19,	"Leonardo Santos Campos",	"ATIVO",	221514.04],
+        [4,	"Juliana Rezende Carvalho",	"ATIVO",	220208.43],
+        [10,	"Isabela Cavalcanti Oliveira",	"ATIVO",	205852.63],
+        [5,	"Natália Araújo Rodrigues",	"ATIVO",	204002.69],
+        [9,	"Yasmin Mendes Pereira",	"INATIVO",	199493.85],
+        [7,	"Rodrigo Soares Siqueira",	"ATIVO",	193210.14],
+        [20,	"Bruno Araújo Marques",	"ATIVO",	177843.38],
+        [11,	"Daniel Ferreira Almeida",	"ATIVO",	150523.16],
+        [21,	"André Gonçalves Farias",	"ATIVO",	148940.45],
+        [15,	"Yasmin Batista Nunes",	"ATIVO",	147517.45],
+        [16,	"Eduardo Pereira Peixoto",	"ATIVO",	144662.30],
+        [1,	"Clara Rodrigues Pinto",	"ATIVO",	132079.93],
+        [3,	"Valéria Barbosa Tavares",	"ATIVO",	103983.82],
+        [8,	"Marcelo Fernandes Fonseca",	"INATIVO",	96375.57],
+        [12,	"Vanessa Pinto Oliveira",	"ATIVO",	79268.30],
+        [14,	"Patrícia Dias Rocha",	"ATIVO",	76171.39],
+        [22,	"Bianca Lopes Freitas",	"ATIVO",	61733.49],
+        [25,	"Clara Tavares Gomes",	"ATIVO",	57798.52],
+        [23,	"Lucas Tavares Rodrigues",	"ATIVO",	44847.81]
+      ]
+    },
+    "Q16": {
+      "columns": ["uf", "total_pedidos", "ticket_medio"],
+      "rows": [
+        ["AL",	15,	1032.86],
+        ["AM",	79,	1095.33],
+        ["BA",	137,	993.72],
+        ["CE",	122,	1096.20],
+        ["DF",	185,	899.92],
+        ["ES",	57,	1397.13],
+        ["GO",	94,	1136.76],
+        ["MA",	23,	996.96],
+        ["MG",	353,	974.96],
+        ["MS",	68,	864.14],
+        ["MT",	44,	1125.95],
+        ["PA",	67,	911.00],
+        ["PB",	64,	1457.28],
+        ["PE",	120,	1108.71],
+        ["PI",	21,	1118.66],
+        ["PR",	227,	1014.97],
+        ["RJ",	489,	976.81],
+        ["RN",	52,	1095.73],
+        ["RO",	17,	1390.84],
+        ["RS",	259,	1016.35],
+        ["SC",	118,	1081.43],
+        ["SE",	8,	1303.78],
+        ["SP",	989,	1054.58],
+        ["TO",	31,	1273.27]
+      ]
+    },
+    "Q17": {
+      "columns": ["clientes_sem_compra_concluida"],
+      "rows": [[377]]
+    },
+    "Q18": {
+      "columns": ["mes", "faturamento"],
+      "rows": [
+        ["2025-01-01",	213850.88],
+        ["2025-02-01",	193194.09],
+        ["2025-03-01",	263190.68],
+        ["2025-04-01",	272596.27],
+        ["2025-05-01",	315172.75],
+        ["2025-06-01",	285630.09],
+        ["2025-07-01",	328839.26],
+        ["2025-08-01",	344320.90],
+        ["2025-09-01",	287837.98],
+        ["2025-10-01",	339698.17],
+        ["2025-11-01",	373100.06],
+        ["2025-12-01",	566087.13]
+      ]
+    },
+    "Q19": {
+      "columns": ["segmento", "total_pedidos"],
+      "rows": [
+        ["PADRAO",	2735],
+        ["PREMIUM",	904]
+      ]
+    },
+    "Q20": {
+      "columns": ["canal_venda", "total_pedidos", "cancelados", "taxa_cancelamento_pct"],
+      "rows": [
+        ["APP",	980,	59,	6.02],
+        ["LOJA",	1113,	32,	2.88],
+        ["SITE",	1556,	113,	7.26],
+        ["TELEFONE",	216,	22,	10.19]
+      ]
+    },
+    "Q21": {
+      "columns": ["canal_aquisicao", "clientes_adquiridos"],
+      "rows": [
+        ["APP",	119],
+        ["LOJA",	130],
+        ["SITE",	159],
+        ["TELEFONE",	29]
+      ]
+    },
+    "Q22": {
+      "columns": ["canal_aquisicao", "clientes", "receita_media_12_meses"],
+      "rows": [
+        ["APP",	189,	4340.54],
+        ["LOJA",	342,	4510.79],
+        ["SITE",	429,	4755.48],
+        ["TELEFONE",	86,	4748.56]
+      ]
+    },
+    "Q23": {
+      "columns": ["mes", "faturamento", "variacao_absoluta"],
+      "rows": [
+        ["2025-01-01",	213850.88,	null],
+        ["2025-02-01",	193194.09,	-20656.79],
+        ["2025-03-01",	263190.68,	69996.59],
+        ["2025-04-01",	272596.27,	9405.59],
+        ["2025-05-01",	315172.75,	42576.48],
+        ["2025-06-01",	285630.09,	-29542.66],
+        ["2025-07-01",	328839.26,	43209.17],
+        ["2025-08-01",	344320.90,	15481.64],
+        ["2025-09-01",	287837.98,	-56482.92],
+        ["2025-10-01",	339698.17,	51860.19],
+        ["2025-11-01",	373100.06,	33401.89],
+        ["2025-12-01",	566087.13,	192987.07]
+      ]
+    },
+    "Q24": {
+      "columns": ["categoria_id", "categoria", "produto_id", "produto", "receita", "posicao"],
+      "rows": [
+        [1,	"Eletrônicos",	22,	"Câmera de Segurança Wi-Fi Voltrix",	119989.22,	1],
+        [1,	"Eletrônicos",	16,	"Tablet 10 polegadas Voltrix",	100227.81,	2],
+        [1,	"Eletrônicos",	11,	"Caixa de Som Portátil Nexalume",	89538.62,	3],
+        [2,	"Informática",	25,	"Notebook 15 polegadas Bytera",	321430.74,	1],
+        [2,	"Informática",	27,	"Notebook 15 polegadas Pixelar",	56306.93,	2],
+        [2,	"Informática",	47,	"Webcam Full HD Kodexa",	37417.39,	3],
+        [3,	"Eletrodomésticos",	49,	"Geladeira Frost Free Casaflux",	165603.23,	1],
+        [3,	"Eletrodomésticos",	50,	"Geladeira Frost Free Termika",	125781.54,	2],
+        [3,	"Eletrodomésticos",	68,	"Máquina de Lavar 12kg Termika",	53026.01,	3],
+        [4,	"Móveis",	86,	"Estante para Livros Confortex",	50122.89,	1],
+        [4,	"Móveis",	74,	"Sofá 3 Lugares Confortex",	21002.33,	2],
+        [4,	"Móveis",	89,	"Rack para TV Confortex",	15238.16,	3],
+        [5,	"Casa e Decoração",	106,	"Conjunto de Panelas Lumiar",	56208.81,	1],
+        [5,	"Casa e Decoração",	107,	"Conjunto de Panelas Tecelar",	52021.80,	2],
+        [5,	"Casa e Decoração",	111,	"Jogo de Copos Aconchega",	44629.02,	3],
+        [6,	"Esporte e Lazer",	137,	"Garrafa Térmica Trilhar",	60295.75,	1],
+        [6,	"Esporte e Lazer",	131,	"Barraca de Camping Trilhar",	53711.71,	2],
+        [6,	"Esporte e Lazer",	119,	"Bicicleta Aro 29 Trilhar",	42298.95,	3],
+        [7,	"Moda",	142,	"Calça Jeans Urbanna",	93473.21,	1],
+        [7,	"Moda",	146,	"Jaqueta Corta-Vento Tramaviva",	28657.32,	2],
+        [7,	"Moda",	139,	"Camiseta Básica Urbanna",	25868.54,	3],
+        [8,	"Beleza e Cuidados Pessoais",	169,	"Barbeador Elétrico Pelebela",	69713.77,	1],
+        [8,	"Beleza e Cuidados Pessoais",	178,	"Prancha Alisadora Pelebela",	39413.40,	2],
+        [8,	"Beleza e Cuidados Pessoais",	163,	"Secador de Cabelo Pelebela",	25229.75,	3],
+        [9,	"Livros e Papelaria",	200,	"Calculadora Científica Letra Viva",	50749.93,	1],
+        [9,	"Livros e Papelaria",	182,	"Livro de Ficção Letra Viva",	27969.16,	2],
+        [9,	"Livros e Papelaria",	198,	"Planner Semanal Grafitto",	24406.99,	3],
+        [10,	"Brinquedos",	204,	"Blocos de Montar 500 peças Cirandinha",	40604.24,	1],
+        [10,	"Brinquedos",	205,	"Boneca Articulada Brincalê",	20965.67,	2],
+        [10,	"Brinquedos",	214,	"Jogo de Tabuleiro Brincalê",	17475.62,	3]
+      ]
+    },
+    "Q25": {
+      "columns": ["clientes_2024_sem_recompra_2025"],
+      "rows": [[103]]
+    },
+    "Q26": {
+      "columns": ["mes_coorte", "clientes_coorte", "clientes_retidos_m3", "retencao_m3_pct"],
+      "rows": [
+        ["2024-01-01",	22,	5,	22.73],
+        ["2024-02-01",	18,	3,	16.67],
+        ["2024-03-01",	25,	4,	16.00],
+        ["2024-04-01",	19,	7,	36.84],
+        ["2024-05-01",	25,	5,	20.00],
+        ["2024-06-01",	24,	4,	16.67],
+        ["2024-07-01",	25,	4,	16.00],
+        ["2024-08-01",	20,	3,	15.00],
+        ["2024-09-01",	19,	6,	31.58],
+        ["2024-10-01",	28,	5,	17.86],
+        ["2024-11-01",	33,	7,	21.21],
+        ["2024-12-01",	40,	11,	27.50]
+      ]
+    },
+    "Q27": {
+      "columns": ["canal_venda", "faturamento", "participacao_pct", "participacao_acumulada_pct"],
+      "rows": [
+        ["SITE",	1474847.43,	38.98,	38.98],
+        ["LOJA",	1117014.11,	29.52,	68.50],
+        ["APP",	996574.67,	26.34,	94.84],
+        ["TELEFONE",	195082.05,	5.16,	100.00]
+      ]
+    },
+    "Q28": {
+      "columns": ["regiao", "vendedor_id", "vendedor", "faturamento"],
+      "rows": [
+        ["CENTRO-OESTE",	20,	"Bruno Araújo Marques",	177843.38],
+        ["NORDESTE",	10,	"Isabela Cavalcanti Oliveira",	205852.63],
+        ["NORTE",	24,	"Vanessa Fonseca Silva",	265098.67],
+        ["SUDESTE",	2,	"Ricardo Cavalcanti Siqueira",	327778.40],
+        ["SUL",	17,	"Heitor Andrade Moura",	235626.59]
+      ]
+    },
+    "Q29": {
+      "columns": ["produto_1_id", "produto_1", "produto_2_id", "produto_2", "pedidos_em_conjunto"],
+      "rows": [
+        [22,	"Câmera de Segurança Wi-Fi Voltrix",	142,	"Calça Jeans Urbanna",	49],
+        [142,	"Calça Jeans Urbanna",	200,	"Calculadora Científica Letra Viva",	47],
+        [137,	"Garrafa Térmica Trilhar",	142,	"Calça Jeans Urbanna",	41],
+        [142,	"Calça Jeans Urbanna",	169,	"Barbeador Elétrico Pelebela",	38],
+        [169,	"Barbeador Elétrico Pelebela",	200,	"Calculadora Científica Letra Viva",	32],
+        [22,	"Câmera de Segurança Wi-Fi Voltrix",	200,	"Calculadora Científica Letra Viva",	31],
+        [111,	"Jogo de Copos Aconchega",	142,	"Calça Jeans Urbanna",	31],
+        [142,	"Calça Jeans Urbanna",	175,	"Protetor Solar FPS 50 Pelebela",	28],
+        [142,	"Calça Jeans Urbanna",	178,	"Prancha Alisadora Pelebela",	28],
+        [22,	"Câmera de Segurança Wi-Fi Voltrix",	137,	"Garrafa Térmica Trilhar",	27]
+      ]
+    },
+    "Q30": {
+      "columns": ["produto_id", "produto", "preco_atual", "preco_medio_realizado", "diferenca_absoluta"],
+      "rows": [
+        [27,	"Notebook 15 polegadas Pixelar",	6790.90,	6256.33,	534.57],
+        [51,	"Geladeira Frost Free Brisalar",	3985.90,	3532.59,	453.31],
+        [25,	"Notebook 15 polegadas Bytera",	4178.90,	3872.66,	306.24],
+        [26,	"Notebook 15 polegadas Kodexa",	5223.90,	4938.65,	285.25],
+        [9,	"Smart TV 50 polegadas Orbitel",	3879.90,	3622.40,	257.50],
+        [69,	"Máquina de Lavar 12kg Brisalar",	3422.90,	3166.87,	256.04],
+        [93,	"Cama Box Casal Lignare",	2537.90,	2292.88,	245.02],
+        [68,	"Máquina de Lavar 12kg Termika",	2632.90,	2410.27,	222.63],
+        [49,	"Geladeira Frost Free Casaflux",	2452.90,	2237.88,	215.02],
+        [84,	"Guarda-Roupa 6 Portas Lignare",	1501.90,	1288.43,	213.47]
+      ]
+    }
+  }
+}
