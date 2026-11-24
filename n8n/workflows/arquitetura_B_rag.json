@@ -1,0 +1,574 @@
+{
+  "name": "TCC | B - NL2SQL RAG",
+  "id": "nK95CtL4u5X6JrRJ",
+  "versionId": "17f34201-e7eb-4f88-9cb8-43c0cfcd2cbb",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tcc/rag",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        2448,
+        -80
+      ],
+      "id": "24787f3e-83a5-45b9-aac6-37ad520e2c82",
+      "name": "Webhook",
+      "webhookId": "ae345151-4fb6-4817-9b5e-480ee435293b"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? {};\n\nif (\n  typeof body.message !== 'string' ||\n  !body.message.trim() ||\n  body.message.length > 2000\n) {\n  throw new Error('Pergunta inválida.');\n}\n\nif (\n  typeof body.requestId !== 'string' ||\n  typeof body.conversationId !== 'string' ||\n  typeof body.architecture !== 'string'\n) {\n  throw new Error('Identificadores obrigatórios ausentes.');\n}\n\nreturn [{\n  json: {\n    requestId: body.requestId,\n    conversationId: body.conversationId,\n    architecture: body.architecture, // ecoado: a interface descarta respostas com valor diferente\n    question: body.message.trim(),\n    startedAt: Date.now()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2672,
+        -80
+      ],
+      "id": "2c9a0182-9255-4ce6-ba4c-28abfe6ab135",
+      "name": "Preparar entrada"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({model: \"text-embedding-3-small\", input: $json.question, dimensions: 1536}) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2896,
+        -80
+      ],
+      "id": "59dcc060-b922-4693-9d97-723daad60505",
+      "name": "Embedding da pergunta",
+      "credentials": {
+        "openAiApi": {
+          "id": "2nDqm1l4GDn15ChI",
+          "name": "OpenAI account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst v = r.data?.[0]?.embedding;\nif (!Array.isArray(v) || v.length !== 1536 || !v.every(Number.isFinite)) throw new Error('Embedding inválido ou dimensão diferente de 1536.');\nreturn [{json:{vector: '[' + v.join(',') + ']', embeddingTokens: r.usage?.total_tokens ?? null}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        -80
+      ],
+      "id": "b779d328-5e35-4029-8bc9-c0322ce495dc",
+      "name": "Validar embedding",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH ranked AS (\n  SELECT doc_id AS document_id, doc_type AS document_type, title, content, metadata,\n         content_sha256 AS content_hash,\n         1 - (embedding <=> $1::public.vector) AS similarity\n  FROM rag.documents\n  WHERE embedding_model = $2\n)\nSELECT COALESCE(jsonb_agg(to_jsonb(ranked) ORDER BY similarity DESC NULLS LAST, document_id COLLATE \"C\"), '[]'::jsonb) AS documents\nFROM ranked;",
+        "options": {
+          "queryReplacement": "={{ [$json.vector, 'text-embedding-3-small'] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        3328,
+        -80
+      ],
+      "id": "f370c977-fdf2-4423-ab7d-220252f28cf9",
+      "name": "Buscar metadados pgvector",
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "GbK776CzGhCvmoNN",
+          "name": "Postgres rag_reader"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Selecione uma credencial PostgreSQL exclusiva de recuperação com SELECT em rag.documents. Não use nl2sql_readonly nem uma conta administrativa."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Busca exata ordenada pelo banco; seleção e expansão sem LLM.\nconst raw = $input.first().json.documents;\nconst docs = typeof raw === 'string' ? JSON.parse(raw) : raw;\nif (!Array.isArray(docs) || !docs.length) throw new Error('Índice RAG vazio ou modelo incompatível. Execute a indexação.');\nconst normalize = s => String(s ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();\nconst type = d => {\n  const t = normalize(d.document_type);\n  if (['table','tabela'].includes(t)) return 'table';\n  if (/relationship|relacionamento|relation|foreign_key/.test(t)) return 'relationship';\n  if (/rule|regra/.test(t)) return 'rule';\n  if (/overview|visao|general|database|catalog|context|schema|global/.test(t)) return 'overview';\n  throw new Error('Tipo de documento não reconhecido: '+d.document_type);\n};\nconst groups = {table:[],relationship:[],rule:[],overview:[]};\nfor (const d of docs) groups[type(d)].push(d);\nif (!groups.table.length || !groups.relationship.length || !groups.rule.length || !groups.overview.length) throw new Error('Índice incompleto: faltam tipos de metadados.');\nconst ident = '[a-zA-Z_][a-zA-Z0-9_]*';\nfunction tableName(d) {\n  const m = typeof d.metadata === 'string' ? JSON.parse(d.metadata) : (d.metadata ?? {});\n  const candidates = [m.table, m.table_name, m.tabela, m.nome_tabela, ...(Array.isArray(m.tables) && m.tables.length === 1 ? m.tables : []), ...(Array.isArray(m.tabelas) && m.tabelas.length === 1 ? m.tabelas : []), d.document_id, d.title];\n  for (const c of candidates) {\n    if (typeof c !== 'string') continue;\n    const qualified = c.match(new RegExp('(?:^|[^a-zA-Z0-9_])dataset\\\\.('+ident+')','i'));\n    if (qualified) return qualified[1].toLowerCase();\n    const tagged = c.match(new RegExp('^(?:table|tabela)[: /_-]+('+ident+')$','i'));\n    if (tagged) return tagged[1].toLowerCase();\n    if (c !== d.document_id && c !== d.title && new RegExp('^'+ident+'$').test(c)) return c.toLowerCase();\n  }\n  throw new Error('Não foi possível identificar a tabela do documento '+d.document_id);\n}\nconst tables = new Map(groups.table.map(d=>[tableName(d),d]));\nif (tables.size !== groups.table.length) throw new Error('Documentos de tabela duplicados.');\nconst escapeRE = s => s.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&');\nconst mentions = (d,n) => new RegExp('(^|[^a-zA-Z0-9_])'+escapeRE(n)+'([^a-zA-Z0-9_]|$)','i').test([d.document_id,d.title,JSON.stringify(d.metadata),d.content].join('\\n'));\nconst graph = new Map([...tables.keys()].map(t=>[t,[]]));\nconst edges = [];\nfor (const d of groups.relationship) {\n  const raw = [d.document_id,d.title,JSON.stringify(d.metadata),d.content].join(' ');\n  const qualified = [...tables.keys()].filter(n=>new RegExp('(^|[^a-zA-Z0-9_])'+escapeRE(n)+'\\\\.[a-zA-Z_][a-zA-Z0-9_]*','i').test(raw));\n  const names = qualified.length === 2 ? qualified : [...tables.keys()].filter(n=>mentions(d,n));\n  if (names.length !== 2) throw new Error('Relacionamento sem dois extremos inequívocos: '+d.document_id);\n  const [a,b]=names; edges.push({a,b,d}); graph.get(a).push(b); graph.get(b).push(a);\n}\nfor (const adj of graph.values()) adj.sort();\nconst seeds = groups.table.slice(0,3).map(tableName);\nconst selected = new Set(seeds);\nfunction path(a,b) {\n  const queue=[[a]], seen=new Set([a]);\n  for(let i=0;i<queue.length;i++) { const p=queue[i], last=p[p.length-1]; if(last===b)return p; for(const n of graph.get(last)??[]) if(!seen.has(n)){seen.add(n);queue.push([...p,n]);} }\n  return [];\n}\nfor(let i=0;i<seeds.length;i++) for(let j=i+1;j<seeds.length;j++) for(const n of path(seeds[i],seeds[j])) selected.add(n);\nconst tableDocs = [...selected].sort().map(n=>tables.get(n));\nconst relationshipDocs = edges.filter(e=>selected.has(e.a)&&selected.has(e.b)).map(e=>e.d);\nconst refs = new Set(tableDocs.flatMap(d=>[...([d.content,JSON.stringify(d.metadata)].join(' ').match(/\\bR\\d{2,}\\b/gi)??[])].map(s=>s.toUpperCase())));\nconst ruleId = d => [d.document_id,d.title].join(' ').match(/\\bR\\d{2,}\\b/i)?.[0]?.toUpperCase();\nconst rules = groups.rule.filter((d,i)=>i<3 || refs.has(ruleId(d)));\nconst chosen = [...groups.overview,...tableDocs,...relationshipDocs,...rules];\nconst context = chosen.map(d=>`[${d.document_id}] ${d.title}\\n${d.content}`).join('\\n\\n');\nreturn [{json:{retrievalEndedAt:Date.now(),shcemaContext:context,retrieval:{method:'exact_cosine_graph_v1',embeddingModel:'text-embedding-3-small',embeddingTokens:$('Validar embedding').first().json.embeddingTokens,topKTables:3,topKRules:3,seedTables:seeds,selectedTables:[...selected].sort(),documents:chosen.map(d=>({id:d.document_id,type:d.document_type,similarity:d.similarity,hash:d.content_hash})),candidateCount:docs.length,contextCharacters:context.length}}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3552,
+        -80
+      ],
+      "id": "03dc7ec4-20ca-41cc-83d1-75bedb66f8b4",
+      "name": "Montar contexto recuperado",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-6-luna",
+          "mode": "list",
+          "cachedResultName": "GPT-6-LUNA"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "\nVocê é um componente NL2SQL responsável exclusivamente\npor traduzir perguntas em linguagem natural para\nconsultas SQL PostgreSQL.\n\nRegras:\n1. Utilize somente tabelas e colunas presentes no esquema.\n2. Gere exclusivamente consultas de leitura.\n3. Não utilize INSERT, UPDATE, DELETE, DROP, ALTER,\n   CREATE ou outras operações de modificação.\n4. Não invente tabelas, colunas ou relacionamentos.\n5. Respeite as regras de negócio fornecidas.\n6. Não execute consultas.\n7. Não produza explicações em linguagem natural.\n8. Não solicite esclarecimentos ao usuário.\n9. Se a pergunta não puder ser traduzida com as\n   informações disponíveis, retorne sql = null.\n\nRetorne exclusivamente um objeto JSON:\n\n{\n  \"sql\": \"consulta SQL ou null\",\n  \"reason\": \"justificativa breve\"\n}\n"
+            },
+            {
+              "content": "=\nESQUEMA DO BANCO:\n\n{{ $json.shcemaContext }}\n\nPERGUNTA DO USUÁRIO:\n\n{{ $('Preparar entrada').first().json.question }}\n\nGere a consulta SQL correspondente.\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {},
+        "simplify": false
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        3776,
+        -80
+      ],
+      "id": "4ff672b9-beb1-4624-9f57-76c87edb318f",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "2nDqm1l4GDn15ChI",
+          "name": "OpenAI account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const r=$input.first().json;\nconst generationEndedAt=Date.now();   // fim da etapa de geração SQL (resposta da LLM recebida)\nconst text=(r.output??[]).filter(o=>o.type==='message').flatMap(o=>o.content??[]).find(c=>typeof c.text==='string')?.text;\nconst usage=r.usage??null;            // tokens informados pela API da OpenAI\nconst llm={model:r.model??null,usage,generationEndedAt};\nlet result;\ntry { result=JSON.parse(text); } catch { result={sql:null,reason:'Resposta do modelo não é JSON válido.'}; }\nreturn [{json:{sql:typeof result?.sql==='string'?result.sql:null,reason:result?.reason??null,...llm}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4000,
+        -80
+      ],
+      "id": "19298964-ac35-4f21-94fd-671bd3d5f32e",
+      "name": "Extrai sql",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Barreira conservadora; a role PostgreSQL somente leitura é obrigatória.\nconst r=$input.first().json;\nlet sql=r.sql?.trim()??'';\nlet reason=null;\nif(!sql) reason=r.reason??'Modelo não gerou SQL.';\n// Remove apenas literais simples e identificadores entre aspas para inspecionar tokens.\n// Rejeita escapes e dollar quoting para evitar ambiguidades lexicais.\nif(!reason && /\\\\|\\$|--|\\/\\*/.test(sql)) reason='Sintaxe não permitida pelo validador conservador.';\nconst masked=sql.replace(/'(?:''|[^'])*'|\"(?:\"\"|[^\"])*\"/g,' ');\nconst body=masked.trim().replace(/;\\s*$/,'');\nif(!reason && (!/^(SELECT|WITH)\\b/i.test(body)||body.includes(';')||/['\"]/.test(body))) reason='Somente uma instrução SELECT ou WITH de leitura é permitida.';\nif(!reason && /\\b(INSERT|UPDATE|DELETE|MERGE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|COPY|CALL|DO|INTO|LOCK|VACUUM|ANALYZE|SET|RESET|EXECUTE|PREPARE|DISCARD|REFRESH|REINDEX|CLUSTER|LISTEN|NOTIFY|UNLISTEN)\\b/i.test(body)) reason='Operação não permitida.';\nif(!reason && /\\b(pg_catalog|information_schema|rag|eval|pg_sleep|pg_read_file|pg_ls_dir|set_config|nextval|setval|dblink\\w*|lo_\\w+|pg_advisory_\\w+)\\b/i.test(body)) reason='Acesso ou função não permitida.';\nreturn [{json:{...r,sql:sql||null,valid:!reason,validationError:reason}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4208,
+        -80
+      ],
+      "id": "7af4bca9-e827-4463-9865-41bd1416b66a",
+      "name": "Validar SQL",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "83c44afe-16a4-4b8a-818e-1d7ef6e2168b",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4432,
+        -80
+      ],
+      "id": "9e1805e0-fb0d-4a30-a97e-3f1789ec5e08",
+      "name": "SQL permitido?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT current_user AS execution_role, current_setting('statement_timeout') AS statement_timeout;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        4656,
+        -192
+      ],
+      "id": "688eec97-436d-406c-8880-b8393230235f",
+      "name": "Verificar role de execução",
+      "credentials": {
+        "postgres": {
+          "id": "erIQfC1OVs6bBVCI",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const r=$input.first().json; if(r.execution_role !== 'nl2sql_readonly') throw new Error('A credencial de execução deve usar nl2sql_readonly.'); if(!r.statement_timeout || r.statement_timeout === '0') throw new Error('Configure statement_timeout para nl2sql_readonly.'); return [{json:$('Validar SQL').first().json}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4880,
+        -192
+      ],
+      "id": "39a483d0-1575-441c-bcce-876420a5a3fb",
+      "name": "Confirmar role",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.sql }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        5088,
+        -192
+      ],
+      "id": "bc893830-1a28-419b-9900-537bc9c6282c",
+      "name": "Execute a SQL query",
+      "alwaysOutputData": true,
+      "notesInFlow": true,
+      "credentials": {
+        "postgres": {
+          "id": "erIQfC1OVs6bBVCI",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Confirme que a credencial usa nl2sql_readonly e possui statement_timeout. Não utilize a credencial de recuperação."
+    },
+    {
+      "parameters": {
+        "jsCode": "let emb=null, ctx=null, g=null;\ntry { emb=$('Validar embedding').first(0)?.json ?? null; } catch {}\ntry { ctx=$('Montar contexto recuperado').first(0)?.json ?? null; } catch {}\ntry { g=$('Extrai sql').first(0)?.json ?? null; } catch {}\nfunction metricas({startedAt, emb, embeddingUsed, ctx, llmCalled, g}) {\n  const u=g?.usage??null;\n  const llmInput = llmCalled ? (u?.input_tokens ?? null) : 0;\n  const llmOutput = llmCalled ? (u?.output_tokens ?? null) : 0;\n  const llmReasoning = llmCalled ? (u?.output_tokens_details?.reasoning_tokens ?? null) : 0;\n  const embedding = !embeddingUsed ? 0 : (emb?.embeddingTokens ?? null);\n  const parts=[llmInput,llmOutput,embedding];\n  const total = parts.some(x=>x===null) ? null : parts.reduce((a,b)=>a+b,0);\n  const contextReadyAt = ctx ? ctx.retrievalEndedAt : startedAt;   // A: contexto fixo, pronto no início\n  return {\n    model: g?.model ?? null,\n    usage: u,\n    tokens: {llmInput, llmOutput, llmReasoning, embedding, total},\n    stageTimingsMs: {\n      retrieval: ctx?.retrievalEndedAt ? ctx.retrievalEndedAt - startedAt : null,\n      generation: (g?.generationEndedAt && contextReadyAt) ? g.generationEndedAt - contextReadyAt : null,\n    },\n  };\n}\nconst entrada=$('Preparar entrada').first().json;\nconst geracao=$('Extrai sql').first().json;\nconst retrieval=$('Montar contexto recuperado').first().json.retrieval;\nconst resultados=$input.all().map(i=>i.json).filter(r=>Object.keys(r).length>0);\nconst columns=resultados.length?Object.keys(resultados[0]):[];\nreturn [{json:{requestId:entrada.requestId,conversationId:entrada.conversationId,architecture:entrada.architecture,status:'completed',message:resultados.length?`Consulta executada com sucesso. ${resultados.length} registro(s) retornado(s).`:'Consulta executada com sucesso, mas nenhum registro foi encontrado.',data:{columns,rows:resultados.map(r=>columns.map(c=>r[c]??null))},metadata:{executionTimeMs:Date.now()-entrada.startedAt,attempts:1,sql:geracao.sql,contextUsed:(retrieval?.documents??[]).map(d=>String(d.id)),retrieval,...metricas({startedAt:entrada.startedAt,emb,embeddingUsed:true,ctx,llmCalled:true,g})}}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5312,
+        -192
+      ],
+      "id": "2e581650-ab74-49e7-a85c-d26ceaf8eff1",
+      "name": "retorno"
+    },
+    {
+      "parameters": {
+        "jsCode": "const e=$('Preparar entrada').first().json;\nconst item=$input.first().json;\n// first(0): lê a saída PRINCIPAL. Estes nós também se ligam a este pela saída de erro (1), e sem o\n// índice o n8n lê justamente essa saída (vazia), devolvendo undefined mesmo com o nó executado.\nlet emb=null, ctx=null, g=null;\ntry { emb=$('Validar embedding').first(0)?.json ?? null; } catch {}\ntry { ctx=$('Montar contexto recuperado').first(0)?.json ?? null; } catch {}\ntry { g=$('Extrai sql').first(0)?.json ?? null; } catch {}\nfunction metricas({startedAt, emb, embeddingUsed, ctx, llmCalled, g}) {\n  const u=g?.usage??null;\n  const llmInput = llmCalled ? (u?.input_tokens ?? null) : 0;\n  const llmOutput = llmCalled ? (u?.output_tokens ?? null) : 0;\n  const llmReasoning = llmCalled ? (u?.output_tokens_details?.reasoning_tokens ?? null) : 0;\n  const embedding = !embeddingUsed ? 0 : (emb?.embeddingTokens ?? null);\n  const parts=[llmInput,llmOutput,embedding];\n  const total = parts.some(x=>x===null) ? null : parts.reduce((a,b)=>a+b,0);\n  const contextReadyAt = ctx ? ctx.retrievalEndedAt : startedAt;   // A: contexto fixo, pronto no início\n  return {\n    model: g?.model ?? null,\n    usage: u,\n    tokens: {llmInput, llmOutput, llmReasoning, embedding, total},\n    stageTimingsMs: {\n      retrieval: ctx?.retrievalEndedAt ? ctx.retrievalEndedAt - startedAt : null,\n      generation: (g?.generationEndedAt && contextReadyAt) ? g.generationEndedAt - contextReadyAt : null,\n    },\n  };\n}\nconst message=String(item.validationError??item.error?.message??(typeof item.error==='string'?item.error:null)??item.message??'Falha na recuperação, geração ou execução.');\n// Etapa em que a falha ocorreu (para análise em eval.run.error_code)\nconst code = !ctx ? 'RETRIEVAL_FAILED'\n  : !g ? 'LLM_ERROR'\n  : !g.sql ? 'SQL_GENERATION_FAILED'\n  : item.validationError ? 'SQL_VALIDATION_FAILED'\n  : 'SQL_EXECUTION_FAILED';\nconst retrieval=ctx?.retrieval??null;\n// a LLM só é chamada depois do contexto montado; se ctx existe e g não, ela falhou (tokens desconhecidos)\nconst metadata={executionTimeMs:Date.now()-e.startedAt,attempts:g?1:0,retrieval,...metricas({startedAt:e.startedAt,emb,embeddingUsed:true,ctx,llmCalled:!!ctx,g})};\nif (typeof g?.sql==='string' && g.sql) metadata.sql=g.sql;               // contrato: sql deve ser string\nif (retrieval) metadata.contextUsed=(retrieval.documents??[]).map(d=>String(d.id));\nreturn [{json:{requestId:e.requestId,conversationId:e.conversationId,architecture:e.architecture,status:'error',message,\n  error:{code,retryable:code==='RETRIEVAL_FAILED'||code==='LLM_ERROR',details:message.slice(0,2000)},metadata}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4752,
+        256
+      ],
+      "id": "5c61aa98-39c8-4c6a-8ab9-576e9eefde38",
+      "name": "Retorno de falha"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        5536,
+        -80
+      ],
+      "id": "3738734e-4344-4ede-a511-86cc64f9ec5f",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Preparar entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar entrada": {
+      "main": [
+        [
+          {
+            "node": "Embedding da pergunta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding da pergunta": {
+      "main": [
+        [
+          {
+            "node": "Validar embedding",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar embedding": {
+      "main": [
+        [
+          {
+            "node": "Buscar metadados pgvector",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar metadados pgvector": {
+      "main": [
+        [
+          {
+            "node": "Montar contexto recuperado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar contexto recuperado": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Extrai sql",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrai sql": {
+      "main": [
+        [
+          {
+            "node": "Validar SQL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar SQL": {
+      "main": [
+        [
+          {
+            "node": "SQL permitido?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQL permitido?": {
+      "main": [
+        [
+          {
+            "node": "Verificar role de execução",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar role de execução": {
+      "main": [
+        [
+          {
+            "node": "Confirmar role",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar role": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "retorno",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retorno de falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "retorno": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retorno de falha": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "pinData": {}
+}
