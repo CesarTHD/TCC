@@ -190,8 +190,8 @@ O schema `rag` guarda os metadados vetoriais da arquitetura B (recuperação sem
 `metadata/schema_catalog.json` e `metadata/business_rules.json`). Ele é separado de `dataset`
 para que os dados avaliados não mudem e para que o contexto do RAG possa ser recriado sem tocar
 no dataset. A role `nl2sql_readonly` não tem `USAGE` em `rag`, então o SQL gerado pelas
-arquiteturas não lê nem altera os embeddings. As tabelas e os índices vetoriais serão criados
-na implementação da arquitetura B.
+arquiteturas não lê nem altera os embeddings. As tabelas `rag.documents` e `rag.index_runs`
+são criadas por `python -m rag.indexer --index` e descritas em `docs/rag_indexing.md`.
 
 A variante `-trixie` usa a mesma glibc da imagem `postgres:16` que criou o volume, então a
 versão de collation `en_US.utf8` registrada em `pg_database.datcollversion` (2.41) continua igual

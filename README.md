@@ -46,6 +46,11 @@ tcc-nl2sql/
 │   ├── schema_catalog.json   # catálogo semântico (contexto para RAG)
 │   └── business_rules.json   # regras de negócio R01–R12
 ├── tests/                    # pytest: gerador + banco + role read-only + catálogo + registro
+├── rag/                      # indexação semântica dos metadados (arquitetura B) — ver docs/rag_indexing.md
+│   ├── documents.py          # metadata/*.json -> 24 documentos semânticos (determinístico)
+│   ├── embeddings.py         # cliente da API de embeddings da OpenAI (text-embedding-3-small)
+│   ├── store.py              # tabelas rag.documents / rag.index_runs e indexação incremental
+│   └── indexer.py            # CLI: --dry-run, --index, --status
 ├── web/                      # interface web (Next.js) — ver web/README.md
 ├── backups/                  # dumps locais do banco (fora do Git; ver seção 12)
 └── docs/
@@ -328,8 +333,24 @@ docker exec tcc-nl2sql-db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /
 > `--clean` substitui os objetos existentes no banco de destino. Use-o somente em um banco novo ou
 > que você pretende sobrescrever.
 
+## 13. Indexação semântica dos metadados (RAG, arquitetura B)
+
+Os metadados de `metadata/` são transformados em 24 documentos (visão geral, 6 tabelas,
+5 relacionamentos, 12 regras), vetorizados com `text-embedding-3-small` (1536 dimensões) e
+gravados em `rag.documents`. A indexação é incremental: só documentos novos ou com texto
+alterado geram embeddings.
+
+```bash
+python -m rag.indexer --dry-run     # plano, tokens e custo estimados; sem API e sem escrita
+python -m rag.indexer --index       # usa OPENAI_API_KEY (ou OPENAI_API) do .env
+python -m rag.indexer --status
+```
+
+Detalhes, hashes de reprodutibilidade e custo: [docs/rag_indexing.md](docs/rag_indexing.md).
+
 ## Documentação
 
+- [docs/rag_indexing.md](docs/rag_indexing.md): documentos semânticos, tabelas `rag.*`, indexação incremental e reprodutibilidade
 - [web/README.md](web/README.md): interface web experimental (chat com as arquiteturas no n8n)
 - [web/docs/n8n-integration.md](web/docs/n8n-integration.md): contrato HTTP que os workflows do n8n devem seguir
 - [docs/database.md](docs/database.md): modelo, regras financeiras e temporais, constraints, índices, segurança
