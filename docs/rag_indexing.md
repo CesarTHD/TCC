@@ -80,6 +80,20 @@ documentos vetorizados e removidos.
 
 A role `nl2sql_readonly` (usada para executar o SQL gerado) não tem acesso ao schema `rag`.
 
+**Leitura pelo workflow B.** A busca vetorial no n8n usa a role `rag_reader`
+([database/rag_reader.sql](../database/rag_reader.sql)): `SELECT` somente em `rag.documents`,
+sem acesso a `dataset`, a `rag.index_runs` ou a `tcc_experiments`, com
+`default_transaction_read_only = on` e `statement_timeout = 10s`. A senha fica em
+`RAG_READER_PASSWORD` no `.env`. Criar ou atualizar a role (idempotente, depois do primeiro `--index`):
+
+```bash
+docker exec -e RAG_READER_PASSWORD=<senha do .env> tcc-nl2sql-db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /database/rag_reader.sql'
+```
+
+No n8n, o nó "Buscar metadados pgvector" usa a credencial `Postgres rag_reader` (host `db`,
+banco `tcc_nl2sql`). A credencial `Postgres account` (`nl2sql_readonly`) fica só para executar o
+SQL gerado.
+
 ## 4. Indexação incremental e idempotente
 
 Para cada documento gerado, `store.plan()` compara com a linha em `rag.documents`:

@@ -162,6 +162,7 @@ sequenciais são baratas. Não houve outras otimizações, para não otimizar pr
 |---|---|---|
 | `POSTGRES_USER` (ex.: `tcc_admin`) | inicialização, seed, manutenção | superusuário do container, dono do schema |
 | `nl2sql_readonly` | execução do SQL gerado pelo LLM (n8n) | `CONNECT`, `USAGE` em `dataset`, `SELECT` nas tabelas |
+| `rag_reader` | busca vetorial do workflow B (n8n) | `CONNECT`, `USAGE` em `rag`, `SELECT` em `rag.documents` (`database/rag_reader.sql`) |
 
 Configuração de `nl2sql_readonly` (`database/roles.sql` e `database/grants.sql`):
 
