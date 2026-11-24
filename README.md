@@ -295,6 +295,48 @@ ORDER BY question_id, architecture;
 > interface. Para remover execuções de teste, use a role administrativa
 > (`DELETE FROM eval.run WHERE experiment_id = ...`).
 
+### Métricas de tokens e tempo por etapa
+
+Os workflows A e B gravam em `metadata` (coluna `eval.run.metadata`) os valores informados pelas
+APIs da OpenAI e os tempos medidos dentro do n8n:
+
+| campo | conteúdo | A | B |
+|---|---|---|---|
+| `model` | modelo devolvido pela API | ✓ | ✓ |
+| `tokens.llmInput` | tokens de entrada da LLM (`usage.input_tokens`) | ✓ | ✓ |
+| `tokens.llmOutput` | tokens de saída da LLM (`usage.output_tokens`, inclui raciocínio) | ✓ | ✓ |
+| `tokens.llmReasoning` | parte de `llmOutput` usada em raciocínio (informativo; não somar) | ✓ | ✓ |
+| `tokens.embedding` | tokens do embedding da pergunta (`usage.total_tokens`) | 0 | ✓ |
+| `tokens.total` | `llmInput + llmOutput + embedding` | ✓ | ✓ |
+| `stageTimingsMs.retrieval` | início do workflow até o contexto montado (embedding + pgvector + seleção) | `null` | ✓ |
+| `stageTimingsMs.generation` | contexto pronto até o SQL extraído (chamada à LLM + leitura da resposta) | ✓ | ✓ |
+| `usage` | objeto `usage` bruto da LLM, para auditoria | ✓ | ✓ |
+
+`null` indica valor desconhecido (etapa que falhou ou não existe na arquitetura); `0` indica que
+nada foi consumido. `executionTimeMs` continua sendo o tempo total informado pela arquitetura.
+A arquitetura A não trata erros no workflow: falhas chegam como `N8N_HTTP_ERROR`, sem métricas.
+A arquitetura B grava as métricas também nas respostas `error`, com `error.code` indicando a
+etapa (`RETRIEVAL_FAILED`, `LLM_ERROR`, `SQL_GENERATION_FAILED`, `SQL_VALIDATION_FAILED`,
+`SQL_EXECUTION_FAILED`).
+
+Para os workflows retornarem `usage`, o nó "Message a model" deve ter **Simplify Output desligado**
+(`simplify = false`).
+
+```sql
+SELECT architecture,
+       count(*)                                                        AS execucoes,
+       round(avg((metadata->'tokens'->>'llmInput')::int))              AS llm_entrada_media,
+       round(avg((metadata->'tokens'->>'llmOutput')::int))             AS llm_saida_media,
+       round(avg((metadata->'tokens'->>'embedding')::int))             AS embedding_medio,
+       sum((metadata->'tokens'->>'total')::int)                        AS tokens_total,
+       percentile_cont(0.5) WITHIN GROUP (ORDER BY (metadata->'stageTimingsMs'->>'retrieval')::int)  AS recuperacao_mediana_ms,
+       percentile_cont(0.5) WITHIN GROUP (ORDER BY (metadata->'stageTimingsMs'->>'generation')::int) AS geracao_mediana_ms
+FROM eval.run
+WHERE experiment_id = '<id>'
+GROUP BY architecture
+ORDER BY architecture;
+```
+
 ## 12. Backup e restauração
 
 Os backups ficam em `backups/` (no `.gitignore`: contêm dados e os hashes de senha das roles).
