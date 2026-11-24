@@ -6,3 +6,6 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Backups locais do banco (contêm dados e hashes de senha das roles)
+backups/

@@ -4,9 +4,17 @@
 #   02_experiments.sql banco tcc_experiments e role experiment_writer (registro)
 # Os dados do dataset são inseridos depois, pelo seed em Python (ver README).
 # Volume já existente: aplique 02_experiments.sql manualmente (ver README).
+#
+# "name" fixa o nome do projeto Compose. Sem ele, o nome viria do diretório e um
+# clone em outra pasta criaria um volume novo e vazio em vez de usar tcc-nl2sql_pgdata.
+#
+# Imagem: PostgreSQL 16 + extensão pgvector (arquitetura B). A variante -trixie usa a
+# mesma base (Debian 13, glibc 2.41) da imagem postgres:16 que criou o volume, o que
+# preserva a versão de collation do cluster. Não use a tag "pg16" (Debian 12).
+name: tcc-nl2sql
 services:
   db:
-    image: postgres:16
+    image: pgvector/pgvector:pg16-trixie
     container_name: tcc-nl2sql-db
     restart: unless-stopped
     environment:

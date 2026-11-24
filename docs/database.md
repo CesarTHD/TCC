@@ -177,7 +177,27 @@ confirma que INSERT, UPDATE, DELETE, TRUNCATE, DROP, ALTER e CREATE continuam ne
 
 As senhas vêm de variáveis de ambiente (`.env`, fora do versionamento).
 
-## 7. Dados pessoais
+## 7. Extensão pgvector e schema `rag`
+
+| item | valor |
+|---|---|
+| imagem Docker | `pgvector/pgvector:pg16-trixie` (Debian 13, glibc 2.41) |
+| PostgreSQL | 16 (16.16 na instalação) |
+| extensão | `vector` 0.8.7, no schema `public` de `tcc_nl2sql` |
+| schema | `rag`, dono `POSTGRES_USER` |
+
+O schema `rag` guarda os metadados vetoriais da arquitetura B (recuperação semântica sobre
+`metadata/schema_catalog.json` e `metadata/business_rules.json`). Ele é separado de `dataset`
+para que os dados avaliados não mudem e para que o contexto do RAG possa ser recriado sem tocar
+no dataset. A role `nl2sql_readonly` não tem `USAGE` em `rag`, então o SQL gerado pelas
+arquiteturas não lê nem altera os embeddings. As tabelas e os índices vetoriais serão criados
+na implementação da arquitetura B.
+
+A variante `-trixie` usa a mesma glibc da imagem `postgres:16` que criou o volume, então a
+versão de collation `en_US.utf8` registrada em `pg_database.datcollversion` (2.41) continua igual
+à do sistema. Procedimento de instalação e backup/restauração: README, seções 3 e 12.
+
+## 8. Dados pessoais
 
 Todos os dados são fictícios: nomes são combinações aleatórias de listas fixas de prenomes e
 sobrenomes comuns, e e-mails usam o domínio reservado `example.com` (RFC 2606). Não há CPF,

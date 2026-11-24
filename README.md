@@ -9,8 +9,9 @@ recuperação de contexto e arquitetura completa com agentes). Ele não é o pro
 
 | item | valor |
 |---|---|
-| SGBD | PostgreSQL 16 (Docker) |
-| banco / schema | `tcc_nl2sql` / `dataset` |
+| SGBD | PostgreSQL 16 (Docker, imagem `pgvector/pgvector:pg16-trixie`) |
+| extensão vetorial | `pgvector` (`vector` 0.8.7), usada pela arquitetura B |
+| banco / schemas | `tcc_nl2sql` / `dataset` (dados) e `rag` (metadados vetoriais) |
 | tabelas | `categorias`, `produtos`, `clientes`, `vendedores`, `pedidos`, `itens_pedido` |
 | seed | `42` |
 | data de referência ("hoje") | `2026-09-30` |
@@ -46,6 +47,7 @@ tcc-nl2sql/
 │   └── business_rules.json   # regras de negócio R01–R12
 ├── tests/                    # pytest: gerador + banco + role read-only + catálogo + registro
 ├── web/                      # interface web (Next.js) — ver web/README.md
+├── backups/                  # dumps locais do banco (fora do Git; ver seção 12)
 └── docs/
     ├── database.md           # modelo, constraints, índices, segurança
     ├── data_generation.md    # como os dados são gerados
@@ -74,6 +76,45 @@ altere `POSTGRES_PORT`. Os scripts Python leem esse mesmo arquivo.
 docker compose up -d
 docker compose ps           # aguarde o status "healthy"
 ```
+
+O `docker-compose.yml` fixa o nome do projeto (`name: tcc-nl2sql`), então os volumes são sempre
+`tcc-nl2sql_pgdata` e `tcc-nl2sql_n8n_data`, seja qual for a pasta de onde o comando é executado.
+
+### Imagem e pgvector
+
+| item | valor |
+|---|---|
+| imagem | `pgvector/pgvector:pg16-trixie` (PostgreSQL oficial + pgvector) |
+| PostgreSQL | 16 (16.16 na data da instalação) |
+| pgvector | extensão `vector` 0.8.7, instalada no schema `public` do banco `tcc_nl2sql` |
+| base | Debian 13 (trixie), glibc 2.41 |
+
+Use a variante `-trixie`. A tag `pg16` é baseada em Debian 12 (glibc 2.36), e o volume foi criado
+com glibc 2.41 (imagem `postgres:16`). Mudar a glibc altera a versão de collation `en_US.utf8`, o
+que gera avisos de *collation version mismatch* e pode exigir `REINDEX` dos índices de texto.
+
+Volume novo: depois do seed, habilite a extensão e o schema `rag` (é idempotente):
+
+```bash
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE EXTENSION IF NOT EXISTS vector;" -c "CREATE SCHEMA IF NOT EXISTS rag;"'
+```
+
+Conferir:
+
+```sql
+SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';
+SELECT nspname FROM pg_namespace WHERE nspname = 'rag';
+```
+
+O schema `rag` guarda os metadados vetoriais da arquitetura B (embeddings de
+`metadata/schema_catalog.json` e `metadata/business_rules.json`). Ele é separado do schema
+`dataset`, que continua somente com os dados avaliados. A role `nl2sql_readonly` não tem acesso a
+`rag`.
+
+Migração de um volume criado com `postgres:16` (feita em 2026-11-23): backup (seção 12),
+troca da imagem no `docker-compose.yml`, `docker compose up -d --no-deps db` (o volume é mantido e
+o entrypoint registra *"Skipping initialization"*) e os dois comandos acima. Contagens, checksums
+(seção 10), `validation.sql` e os resultados das 30 consultas do benchmark não mudaram.
 
 ## 4. Criar o schema
 
@@ -138,6 +179,9 @@ python seed/stats.py
 | refazer apenas os dados | `python seed/seed.py --reset` |
 | recriar o schema vazio e popular | `docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /database/reset.sql'` e depois `python seed/seed.py` |
 | apagar tudo (volume, roles) e recomeçar | `docker compose down -v`, `docker compose up -d` e `python seed/seed.py` |
+
+> `docker compose down -v` apaga também `tcc_experiments` (registro dos experimentos), o schema
+> `rag` e o volume do n8n. Faça backup antes (seção 12).
 
 ## 8. Conectar ao banco
 
@@ -245,6 +289,44 @@ ORDER BY question_id, architecture;
 > Para avaliar, use **uma conversa por pergunta**. Linhas sem `experiment_id` são uso livre da
 > interface. Para remover execuções de teste, use a role administrativa
 > (`DELETE FROM eval.run WHERE experiment_id = ...`).
+
+## 12. Backup e restauração
+
+Os backups ficam em `backups/` (no `.gitignore`: contêm dados e os hashes de senha das roles).
+O `pg_dump` roda dentro do container e o arquivo é copiado para o host:
+
+```bash
+TS=$(date +%Y%m%d_%H%M%S)
+mkdir -p backups
+docker exec tcc-nl2sql-db sh -c "pg_dump -U \"\$POSTGRES_USER\" -d tcc_nl2sql -Fc -f /tmp/tcc_nl2sql_$TS.dump"
+docker exec tcc-nl2sql-db sh -c "pg_dump -U \"\$POSTGRES_USER\" -d tcc_experiments -Fc -f /tmp/tcc_experiments_$TS.dump"
+docker exec tcc-nl2sql-db sh -c "pg_dumpall -U \"\$POSTGRES_USER\" --globals-only -f /tmp/globals_$TS.sql"
+docker cp tcc-nl2sql-db:/tmp/tcc_nl2sql_$TS.dump backups/
+docker cp tcc-nl2sql-db:/tmp/tcc_experiments_$TS.dump backups/
+docker cp tcc-nl2sql-db:/tmp/globals_$TS.sql backups/
+```
+
+Conferir o conteúdo do dump (deve listar o schema `dataset`, as 6 `TABLE DATA` e as FKs):
+
+```bash
+docker exec tcc-nl2sql-db pg_restore -l /tmp/tcc_nl2sql_$TS.dump
+```
+
+Restaurar em um volume **novo** (o dump já contém o schema, os dados, a extensão `vector` e o
+schema `rag`):
+
+```bash
+docker compose up -d db                       # volume vazio: initdb cria o banco, as roles e o schema vazio
+docker cp backups/tcc_nl2sql_<TS>.dump tcc-nl2sql-db:/tmp/
+docker exec tcc-nl2sql-db sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --role="$POSTGRES_USER" /tmp/tcc_nl2sql_<TS>.dump'
+docker exec tcc-nl2sql-db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /database/grants.sql'
+```
+
+`tcc_experiments` é restaurado da mesma forma (`-d tcc_experiments`). Depois, confira os checksums
+(seção 10) e rode `validation.sql` (seção 6).
+
+> `--clean` substitui os objetos existentes no banco de destino. Use-o somente em um banco novo ou
+> que você pretende sobrescrever.
 
 ## Documentação
 
